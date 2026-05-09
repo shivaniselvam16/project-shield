@@ -162,10 +162,11 @@ document.getElementById("welcome").innerText =
 
 async function loadData(){
 
-const logsRes = await fetch("http://localhost:5000/logs");
+const logsRes = await fetch("https://project-shield-1-tmre.onrender.com/logs");
 const logs = await logsRes.json();
 
-const detectRes = await fetch("http://localhost:5000/detect", {
+
+const detectRes = await fetch("https://project-shield-1-tmre.onrender.com/detect", {
     method: "POST",
     headers: {
         "Content-Type": "application/json"
@@ -227,6 +228,7 @@ list.appendChild(li);
 
 });
 }
+let chart;
 loadData();
 setInterval(loadData,5000);
 </script>
