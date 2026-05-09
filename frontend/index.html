@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -171,9 +170,14 @@ window.location.href = "login.html";
 
 async function loadData(){
 
+// 1. Fetch logs
 const logsRes = await fetch("https://project-shield-1-tmre.onrender.com/logs");
 const logs = await logsRes.json();
 
+// 2. Safe AI detect call (optional but protected)
+let detect = { status: "safe", prediction: 0 };
+
+try {
 const detectRes = await fetch("https://project-shield-1-tmre.onrender.com/detect",{
 method:"POST",
 headers:{
@@ -186,23 +190,28 @@ packets:10
 })
 });
 
-const detect = await detectRes.json();
+detect = await detectRes.json();
+} catch (err) {
+console.log("AI detect API failed, using fallback");
+}
 
-const suspicious = detect.prediction;
+// 3. FIXED LOGIC (IMPORTANT)
+const suspicious = logs.filter(log => log.level === "high").length;
 const safe = logs.length - suspicious;
 
+// 4. UI update
 document.getElementById("total").innerText = logs.length;
 document.getElementById("suspicious").innerText = suspicious;
 document.getElementById("status").innerText =
-detect.status.toUpperCase();
+(detect.status || "safe").toUpperCase();
 
 document.getElementById("alertBox").innerText =
-detect.status === "attack"
+(detect.status === "attack")
 ? "⚠ AI DETECTED ATTACK!"
 : "";
 
-const ctx =
-document.getElementById("pieChart").getContext("2d");
+// 5. Chart update
+const ctx = document.getElementById("pieChart").getContext("2d");
 
 if(chart){
 chart.destroy();
@@ -213,7 +222,7 @@ type:"pie",
 data:{
 labels:["Safe Logs","Suspicious Logs"],
 datasets:[{
-data:[safe,suspicious]
+data:[safe, suspicious]
 }]
 },
 options:{
@@ -221,13 +230,14 @@ responsive:true
 }
 });
 
+// 6. Logs render
 const list = document.getElementById("logList");
 list.innerHTML = "";
 
 logs.forEach(log=>{
 
 const li = document.createElement("li");
-li.className = log.level;
+li.className = log.level || "low";
 
 li.innerHTML =
 "<b>"+log.message+"</b><br>" +
@@ -240,7 +250,10 @@ list.appendChild(li);
 
 }
 
+// initial load
 loadData();
+
+// auto refresh
 setInterval(loadData,5000);
 </script>
 
