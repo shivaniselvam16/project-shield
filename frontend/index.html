@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Project Shield Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#0f0f0f;
+color:white;
+padding:20px;
+}
+
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+}
+
+button{
+padding:10px 15px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.logout{
+background:#ff4444;
+color:white;
+}
+
+.refresh{
+background:#00bcd4;
+color:white;
+margin-right:10px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:15px;
+margin-bottom:20px;
+}
+
+.card{
+background:#1e1e1e;
+padding:20px;
+border-radius:14px;
+box-shadow:0 0 10px rgba(0,255,255,.08);
+}
+
+.big{
+font-size:28px;
+font-weight:bold;
+margin-top:10px;
+}
+
+.logs{
+background:#1e1e1e;
+padding:20px;
+border-radius:14px;
+}
+
+ul{
+list-style:none;
+padding:0;
+margin:0;
+}
+
+li{
+padding:12px;
+margin:8px 0;
+border-radius:8px;
+background:#2a2a2a;
+}
+
+.high{
+border-left:5px solid red;
+color:#ff7777;
+}
+
+.low{
+border-left:5px solid lightgreen;
+color:#9cff9c;
+}
+
+.medium{
+border-left:5px solid orange;
+color:#ffcc66;
+}
+
+.warn{
+color:#ff5555;
+font-weight:bold;
+margin-top:10px;
+}
+
+small{
+color:#aaa;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+<div>
+<h1>🛡 Project Shield Dashboard</h1>
+<p id="welcome"></p>
+</div>
+
+<div>
+<button class="refresh" onclick="loadData()">Refresh</button>
+<button class="logout" onclick="logout()">Logout</button>
+</div>
+</div>
+
+<div class="grid">
+<div class="card">
+<div>Total Logs</div>
+<div class="big" id="total">0</div>
+</div>
+
+<div class="card">
+<div>Suspicious Logs</div>
+<div class="big" id="suspicious">0</div>
+</div>
+
+<div class="card">
+<div>Status</div>
+<div class="big" id="status">SAFE</div>
+</div>
+</div>
+
+
+<div class="card">
+<h2> Security Analytics</h2>
+<canvas id="pieChart"></canvas>
+</div>
+
+<div class="logs">
+<div class="logs">
+
+<h2> Security Logs</h2>
+<ul id="logList"></ul>
+<p class="warn" id="alertBox"></p>
+</div>
+
+<script>
+const username = localStorage.getItem("username");
+const token = localStorage.getItem("token");
+
+if(!token){
+window.location.href="login.html";
+}
+
+document.getElementById("welcome").innerText =
+"Welcome, " + username;
+
+async function loadData(){
+
+const logsRes = await fetch("http://localhost:5000/logs");
+const logs = await logsRes.json();
+
+const detectRes = await fetch("http://localhost:5000/detect", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        port: 80,
+        duration: 100,
+        packets: 10
+    })
+});
+
+const detect = await detectRes.json();
+const safe = logs.length - detect.prediction;
+const suspicious = detect.prediction;
+
+const ctx = document.getElementById("pieChart");
+
+if(chart){
+    chart.destroy();
+}
+
+chart = new Chart(ctx,{
+    type:"pie",
+    data:{
+        labels:["Safe Logs","Suspicious Logs"],
+        datasets:[{
+            data:[safe,suspicious]
+        }]
+    }
+});
+document.getElementById("total").innerText = logs.length;
+
+document.getElementById("suspicious").innerText =
+detect.prediction ;
+
+document.getElementById("status").innerText =
+detect.status.toUpperCase();
+
+document.getElementById("alertBox").innerText =
+detect.status === "attack"
+? "⚠ AI DETECTED ATTACK!"
+: "";
+
+const list = document.getElementById("logList");
+list.innerHTML = "";
+
+logs.forEach(log=>{
+
+const li = document.createElement("li");
+li.className = log.level;
+
+li.innerHTML =
+"<b>" + log.message + "</b><br>" +
+log.level + " | " +
+log.source + "<br>" +
+"<small>" + (log.time || "") + "</small>";
+
+list.appendChild(li);
+
+});
+}
+loadData();
+setInterval(loadData,5000);
+</script>
+
+</body>
+</html>
