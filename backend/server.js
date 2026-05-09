@@ -9,16 +9,31 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-mongoose.set("bufferCommands", false);
+
 const PORT = process.env.PORT || 5000;
 const SECRET = process.env.JWT_SECRET || "shield_secret_key";
 
-/* MongoDB */
-mongoose.connect(process.env.MONGO_URI, {
-  serverSelectionTimeoutMS: 5000
-})
-.then(()=>console.log("MongoDB Connected"))
-.catch(err=>console.log("mongo error:",err));
+
+mongoose.set("bufferCommands", false);
+
+const startServer = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000
+    });
+
+    console.log("MongoDB Connected");
+
+    app.listen(PORT, () => {
+      console.log("Server running on port " + PORT);
+    });
+
+  } catch (err) {
+    console.log("mongo error:", err);
+  }
+};
+
+startServer();
 
 /* Logs */
 let logs = [
