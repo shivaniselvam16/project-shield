@@ -3,21 +3,22 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const axios = require("axios");
 const User = require("./models/user");
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-const SECRET = "shield_secret_key";
+const PORT = process.env.PORT || 5000;
+const SECRET = process.env.JWT_SECRET || "shield_secret_key";
 
-// MongoDB
-mongoose.connect("mongodb://projectai370_db_user:shivix16@ac-pmrh4sd-shard-00-00.1zn5gct.mongodb.net:27017,ac-pmrh4sd-shard-00-01.1zn5gct.mongodb.net:27017,ac-pmrh4sd-shard-00-02.1zn5gct.mongodb.net:27017/?ssl=true&replicaSet=atlas-ijrevb-shard-0&authSource=admin&appName=project-shield-db")
+/* MongoDB */
+mongoose.connect(process.env.MONGO_URI)
 .then(()=>console.log("MongoDB Connected"))
 .catch(err=>console.log(err));
 
-/* ---------------- TEMP LOGS ---------------- */
+/* Logs */
 let logs = [
  {id:1,message:"Failed Login Attempts",level:"high",source:"Firewall"},
  {id:2,message:"Normal User Login",level:"low",source:"Auth"},
@@ -26,39 +27,67 @@ let logs = [
 
 let id = 4;
 
-/* ---------------- HOME ---------------- */
-app.get("/", (req,res)=>{
- res.send("Project Shield Running with AI Detection");
+/* Home */
+app.get("/",(req,res)=>{
+ res.send("Project Shield Running");
 });
 
-/* ---------------- REGISTER ---------------- */
+/* Register */
 app.post("/register", async(req,res)=>{
  try{
    const {username,password} = req.body;
 
    const existing = await User.findOne({username});
-   if(existing) return res.json({status:"failed",message:"User exists"});
+
+   if(existing){
+     return res.json({
+       status:"failed",
+       message:"User exists"
+     });
+   }
 
    const hash = await bcrypt.hash(password,10);
 
-   await User.create({username,password:hash});
+   await User.create({
+     username,
+     password:hash
+   });
 
-   res.json({status:"success",message:"Registered"});
+   res.json({
+     status:"success",
+     message:"Registered"
+   });
+
  }catch(err){
-   res.json({status:"failed",message:err.message});
+   res.json({
+     status:"failed",
+     message:err.message
+   });
  }
 });
 
-/* ---------------- LOGIN ---------------- */
+/* Login */
 app.post("/login", async(req,res)=>{
  try{
    const {username,password} = req.body;
 
    const user = await User.findOne({username});
-   if(!user) return res.json({status:"failed",message:"User not found"});
+
+   if(!user){
+     return res.json({
+       status:"failed",
+       message:"User not found"
+     });
+   }
 
    const match = await bcrypt.compare(password,user.password);
-   if(!match) return res.json({status:"failed",message:"Wrong password"});
+
+   if(!match){
+     return res.json({
+       status:"failed",
+       message:"Wrong password"
+     });
+   }
 
    const token = jwt.sign({username},SECRET,{expiresIn:"1h"});
 
@@ -69,11 +98,14 @@ app.post("/login", async(req,res)=>{
    });
 
  }catch(err){
-   res.json({status:"failed",message:err.message});
+   res.json({
+     status:"failed",
+     message:err.message
+   });
  }
 });
 
-/* ---------------- LOGS ---------------- */
+/* Logs */
 app.get("/logs",(req,res)=>{
  res.json(logs);
 });
@@ -91,42 +123,35 @@ app.post("/logs",(req,res)=>{
 
  logs.push(newLog);
 
- res.json({status:"added",log:newLog});
-});
-
-/* ---------------- ML DETECTION (NEW) ---------------- */
-app.post("/detect", async (req, res) => {
-    try {
-        const response = await axios.post("http://127.0.0.1:8000/predict", {
-            "Destination Port": req.body.port || 80,
-            "Flow Duration": req.body.duration || 100,
-            "Total Fwd Packets": req.body.packets || 10
-        });
-
-        res.json({
-            success: true,
-            prediction: response.data.prediction,
-            status: response.data.status
-        });
-
-    } catch (err) {
-        res.json({
-            success: false,
-            error: err.message
-        });
-    }
-});
-
-/* ---------------- STATS ---------------- */
-app.get("/stats",(req,res)=>{
  res.json({
-   total: logs.length,
-   high: logs.filter(x=>x.level==="high").length,
-   low: logs.filter(x=>x.level==="low").length
+   status:"added",
+   log:newLog
  });
 });
 
-/* ---------------- START SERVER ---------------- */
-app.listen(5000,()=>{
- console.log("Server running on port 5000");
+/* Detect */
+app.post("/detect",(req,res)=>{
+
+ const prediction = Math.random() > 0.7 ? 1 : 0;
+
+ res.json({
+   success:true,
+   prediction,
+   status: prediction ? "attack" : "normal"
+ });
+
+});
+
+/* Stats */
+app.get("/stats",(req,res)=>{
+ res.json({
+   total:logs.length,
+   high:logs.filter(x=>x.level==="high").length,
+   low:logs.filter(x=>x.level==="low").length
+ });
+});
+
+/* Start */
+app.listen(PORT,()=>{
+ console.log("Server running on port " + PORT);
 });

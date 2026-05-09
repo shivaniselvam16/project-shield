@@ -1,8 +1,10 @@
+
 <!DOCTYPE html>
 <html>
 <head>
 <title>Project Shield Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{
 margin:0;
@@ -62,6 +64,7 @@ margin-top:10px;
 background:#1e1e1e;
 padding:20px;
 border-radius:14px;
+margin-top:20px;
 }
 
 ul{
@@ -119,6 +122,7 @@ color:#aaa;
 </div>
 
 <div class="grid">
+
 <div class="card">
 <div>Total Logs</div>
 <div class="big" id="total">0</div>
@@ -133,75 +137,62 @@ color:#aaa;
 <div>Status</div>
 <div class="big" id="status">SAFE</div>
 </div>
+
 </div>
 
-
 <div class="card">
-<h2> Security Analytics</h2>
+<h2>Security Analytics</h2>
 <canvas id="pieChart"></canvas>
 </div>
 
 <div class="logs">
-<div class="logs">
-
-<h2> Security Logs</h2>
+<h2>Security Logs</h2>
 <ul id="logList"></ul>
 <p class="warn" id="alertBox"></p>
 </div>
 
 <script>
+let chart = null;
+
 const username = localStorage.getItem("username");
 const token = localStorage.getItem("token");
 
 if(!token){
-window.location.href="login.html";
+window.location.href = "login.html";
 }
 
 document.getElementById("welcome").innerText =
 "Welcome, " + username;
+
+function logout(){
+localStorage.clear();
+window.location.href = "login.html";
+}
 
 async function loadData(){
 
 const logsRes = await fetch("https://project-shield-1-tmre.onrender.com/logs");
 const logs = await logsRes.json();
 
-
-const detectRes = await fetch("https://project-shield-1-tmre.onrender.com/detect", {
-    method: "POST",
-    headers: {
-        "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-        port: 80,
-        duration: 100,
-        packets: 10
-    })
+const detectRes = await fetch("https://project-shield-1-tmre.onrender.com/detect",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+port:80,
+duration:100,
+packets:10
+})
 });
 
 const detect = await detectRes.json();
-const safe = logs.length - detect.prediction;
+
 const suspicious = detect.prediction;
+const safe = logs.length - suspicious;
 
-const ctx = document.getElementById("pieChart");
-
-if(chart){
-    chart.destroy();
-}
-
-chart = new Chart(ctx,{
-    type:"pie",
-    data:{
-        labels:["Safe Logs","Suspicious Logs"],
-        datasets:[{
-            data:[safe,suspicious]
-        }]
-    }
-});
 document.getElementById("total").innerText = logs.length;
-
-document.getElementById("suspicious").innerText =
-detect.prediction ;
-
+document.getElementById("suspicious").innerText = suspicious;
 document.getElementById("status").innerText =
 detect.status.toUpperCase();
 
@@ -209,6 +200,26 @@ document.getElementById("alertBox").innerText =
 detect.status === "attack"
 ? "⚠ AI DETECTED ATTACK!"
 : "";
+
+const ctx =
+document.getElementById("pieChart").getContext("2d");
+
+if(chart){
+chart.destroy();
+}
+
+chart = new Chart(ctx,{
+type:"pie",
+data:{
+labels:["Safe Logs","Suspicious Logs"],
+datasets:[{
+data:[safe,suspicious]
+}]
+},
+options:{
+responsive:true
+}
+});
 
 const list = document.getElementById("logList");
 list.innerHTML = "";
@@ -219,16 +230,16 @@ const li = document.createElement("li");
 li.className = log.level;
 
 li.innerHTML =
-"<b>" + log.message + "</b><br>" +
-log.level + " | " +
-log.source + "<br>" +
-"<small>" + (log.time || "") + "</small>";
+"<b>"+log.message+"</b><br>" +
+log.level+" | "+log.source+"<br>" +
+"<small>"+(log.time || "")+"</small>";
 
 list.appendChild(li);
 
 });
+
 }
-let chart;
+
 loadData();
 setInterval(loadData,5000);
 </script>

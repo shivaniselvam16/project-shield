@@ -2,6 +2,7 @@
 <html>
 <head>
 <title>Register - Project Shield</title>
+
 <style>
 body{
 background:#111;
@@ -11,26 +12,47 @@ display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
+margin:0;
 }
+
 .box{
 background:#222;
 padding:30px;
 border-radius:12px;
 width:320px;
+box-shadow:0 0 15px rgba(0,255,255,.2);
 }
+
 input,button{
 width:100%;
 padding:10px;
 margin:10px 0;
+border:none;
+border-radius:8px;
 }
+
 button{
 cursor:pointer;
+background:#00c3ff;
+color:white;
+font-weight:bold;
+}
+
+button:hover{
+background:#0099cc;
+}
+
+#msg{
+text-align:center;
+margin-top:10px;
 }
 </style>
 </head>
+
 <body>
 
 <div class="box">
+
 <h2>🛡 Register</h2>
 
 <input type="text" id="user" placeholder="Username">
@@ -39,6 +61,7 @@ cursor:pointer;
 <button onclick="registerUser()">Create Account</button>
 
 <p id="msg"></p>
+
 </div>
 
 <script>
@@ -46,6 +69,10 @@ async function registerUser(){
 
 const username = document.getElementById("user").value;
 const password = document.getElementById("pass").value;
+
+document.getElementById("msg").innerText = "Creating account...";
+
+try{
 
 const res = await fetch("https://project-shield-1-tmre.onrender.com/register",{
 method:"POST",
@@ -59,13 +86,29 @@ const data = await res.json();
 
 document.getElementById("msg").innerText = data.message;
 
-if(data.status==="success" || data.message.includes("Registered")){
+if(data.status === "success"){
+
+document.getElementById("msg").style.color = "lightgreen";
+
 setTimeout(()=>{
-window.location.href="login.html";
+window.location.href = "login.html";
 },1000);
+
+}else{
+document.getElementById("msg").style.color = "red";
 }
+
+}catch(err){
+
+document.getElementById("msg").innerText = "Server Error";
+document.getElementById("msg").style.color = "red";
+
+}
+
 }
 </script>
 
 </body>
 </html>
+
+
